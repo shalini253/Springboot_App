@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springboot-app-deployment
+  labels:
+    app: springboot-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: springboot-app
+  template:
+    metadata:
+      labels:
+        app: springboot-app
+    spec:
+      containers:
+      - name: springboot-app
+        image: shalini253/springboot-app:1.0
+        ports:
+        - containerPort: 8081  # Adjust this port based on your Spring Boot application configuration
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: production  # Adjust according to your Spring Boot profiles
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:mysql://database-1.cakpa423ju8s.us-east-1.rds.amazonaws.com:3306/Database_RDS  # Adjust according to your RDS configuration
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: username  
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
