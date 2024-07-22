@@ -22,7 +22,7 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-                    dockerImage = docker.build("shalini253/springboot-app:1.0")
+                    dockerImage = docker.build("shalini253/springboot-app:${env.BUILD_NUMBER}")
                     echo 'Docker image built successfully.'
                 }
             }
@@ -31,7 +31,8 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
-                        dockerImage.push()
+                        dockerImage.push("${env.BUILD_NUMBER}")
+                        dockerImage.push("latest")
                     }
                     echo 'Docker image pushed successfully.'
                 }
@@ -51,7 +52,10 @@ pipeline {
     }
     post {
         always {
-            echo 'This will always run regardless of the result of the pipeline.'
+            script {
+                sh 'docker logout'
+                echo 'Logged out of Docker Hub.'
+            }
         }
         success {
             echo 'Pipeline completed successfully.'
