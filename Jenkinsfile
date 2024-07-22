@@ -1,15 +1,32 @@
 pipeline {
-    agent any
+    agent any  // Specifies that the pipeline can run on any available Jenkins agent
+
     environment {
-        DOCKERHUB_CREDS = credentials('DockerToken') // Ensure this matches the successful test pipeline
-        KUBE_CONFIG = credentials('Config_Pat')
+        // Define environment variables
+        DOCKER_IMAGE = 'shalini253/springboot-app'  // Match this to your Docker Hub repository and image name
+        DOCKER_TAG = "${env.BUILD_NUMBER}"  // Use Jenkins build number as the tag for better version control
+        REGISTRY = 'docker.io'  // Docker Hub registry
     }
+
     stages {
+        stage('Test Credentials') {
+            steps {
+                script {
+                    // Testing credentials binding
+                    withCredentials([usernamePassword(credentialsId: 'DockerToken', usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASS')]) {
+                        echo "Attempting to log in as: $REGISTRY_USER"
+                        sh 'echo "*** Credentials bound successfully ***"'
+                    }
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/shalini253/Springboot_App.git'
             }
         }
+
         stage('Check Docker') {
             steps {
                 script {
@@ -19,48 +36,60 @@ pipeline {
                 }
             }
         }
-        stage('Docker Build') {
+
+        stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("shalini253/springboot-app:${env.BUILD_NUMBER}")
-                    echo 'Docker image built successfully.'
+                    // Build the Docker image
+                    sh "docker build -t ${REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG} ."
                 }
             }
         }
-        stage('Docker Push') {
+
+        stage('Push Image') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDS') {
-                        dockerImage.push("${env.BUILD_NUMBER}")
-                        dockerImage.push("latest")
+                    withCredentials([usernamePassword(credentialsId: 'DockerToken', usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASS')]) {
+                        sh "echo $REGISTRY_PASS | docker login -u $REGISTRY_USER --password-stdin $REGISTRY"
+                        sh "docker push ${REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}"
                     }
-                    echo 'Docker image pushed successfully.'
                 }
             }
         }
-        stage('Deploy to Kubernetes') {
+
+        stage('Deploy') {
             steps {
                 script {
-                    withKubeConfig([credentialsId: 'KUBE_CONFIG']) {
-                        sh 'kubectl apply -f kubernetes/deployment.yaml'
-                        sh 'kubectl apply -f kubernetes/service.yaml'
-                        echo 'Application deployed to Kubernetes successfully.'
+                    withCredentials([file(credentialsId: 'Config_Pat', variable: 'KUBECONFIG_FILE')]) {
+                        // Set the kubeconfig for Kubernetes commands
+                        sh "export KUBECONFIG=${KUBECONFIG_FILE}"
+                        sh "kubectl apply -f kubernetes/service.yaml"
+                        sh "kubectl apply -f kubernetes/deployment.yaml"
                     }
                 }
             }
         }
     }
+
     post {
         always {
+            // Actions to always perform after the pipeline runs
             script {
-                echo "Pipeline finished. Always block executed."
+                sh 'docker logout'
+                echo 'Clean up actions or other always-executed steps could be placed here.'
             }
         }
+
         success {
-            echo 'Pipeline completed successfully.'
+            // Actions to perform if the pipeline succeeds
+            echo 'Deployment was successful.'
         }
+
         failure {
-            echo 'Pipeline failed. Check the logs for details.'
+            // Actions to perform if the pipeline fails
+            echo 'An error occurred during the build or deployment process.'
         }
     }
 }
+
+   
