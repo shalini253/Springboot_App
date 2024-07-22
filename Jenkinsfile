@@ -5,9 +5,9 @@ pipeline {
         KUBE_CONFIG = credentials('Config_Pat')
     }
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                sh 'mvn clean package'
+                git url: 'https://github.com/shalini253/Springboot_App.git'
             }
         }
         stage('Docker Build') {
@@ -36,3 +36,4 @@ pipeline {
         }
     }
 }
+
