@@ -60,11 +60,12 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: 'Config_Pat', variable: 'KUBECONFIG_FILE')]) {
+                    withCredentials([file(credentialsId: 'Config_Pat', variable: 'KUBECONFIG')]) {
                         // Set the kubeconfig for Kubernetes commands
-                        sh "export KUBECONFIG=${KUBECONFIG_FILE}"
-                        sh "kubectl apply -f kubernetes/service.yaml"
-                        sh "kubectl apply -f kubernetes/deployment.yaml"
+                        sh 'kubectl version'
+                        sh 'kubectl get nodes'
+                        sh "kubectl apply -f kubernetes/service.yaml --kubeconfig=$KUBECONFIG"
+                        sh "kubectl apply -f kubernetes/deployment.yaml --kubeconfig=$KUBECONFIG"
                     }
                 }
             }
@@ -91,5 +92,3 @@ pipeline {
         }
     }
 }
-
-   
