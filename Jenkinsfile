@@ -10,37 +10,73 @@ pipeline {
                 git url: 'https://github.com/shalini253/Springboot_App.git'
             }
         }
+        stage('Check Docker') {
+            steps {
+                script {
+                    // Check if Docker is available on the Jenkins agent
+                    try {
+                        sh 'docker --version'
+                        echo 'Docker is available.'
+                    } catch (Exception e) {
+                        echo 'Docker is not available, stopping build.'
+                        error('Stopping the build as Docker is not available.')
+                    }
+                }
+            }
+        }
         stage('Docker Build') {
             steps {
                 script {
-                    echo 'Starting Docker build...'
-                    dockerImage = docker.build("shalini253/springboot-app:1.0")
-                    echo 'Docker build completed successfully.'
+                    try {
+                        dockerImage = docker.build("shalini253/springboot-app:1.0")
+                        echo 'Docker image built successfully.'
+                    } catch (Exception e) {
+                        echo "Failed to build Docker image: ${e.message}"
+                        error('Failed to build Docker image.')
+                    }
                 }
             }
         }
         stage('Docker Push') {
             steps {
                 script {
-                    echo 'Starting Docker push...'
-                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
-                        dockerImage.push()
+                    try {
+                        docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
+                            dockerImage.push()
+                        }
+                        echo 'Docker image pushed successfully.'
+                    } catch (Exception e) {
+                        echo "Failed to push Docker image: ${e.message}"
+                        error('Failed to push Docker image.')
                     }
-                    echo 'Docker push completed successfully.'
                 }
             }
         }
         stage('Deploy to Kubernetes') {
             steps {
-                echo 'Deploying to Kubernetes...'
-                withKubeConfig([credentialsId: 'KUBE_CONFIG']) {
-                    sh 'kubectl apply -f kubernetes/deployment.yaml'
-                    sh 'kubectl apply -f kubernetes/service.yaml'
+                try {
+                    withKubeConfig([credentialsId: 'KUBE_CONFIG']) {
+                        sh 'kubectl apply -f kubernetes/deployment.yaml'
+                        sh 'kubectl apply -f kubernetes/service.yaml'
+                        echo 'Application deployed to Kubernetes successfully.'
+                    }
+                } catch (Exception e) {
+                    echo "Failed to deploy to Kubernetes: ${e.message}"
+                    error('Failed to deploy to Kubernetes.')
                 }
-                echo 'Deployment to Kubernetes completed successfully.'
             }
         }
     }
+    post {
+        always {
+            echo 'This will always run regardless of the result of the pipeline.'
+        }
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check the logs for details.'
+        }
+    }
 }
-
 
