@@ -53,8 +53,7 @@ pipeline {
     post {
         always {
             script {
-                sh 'docker logout'
-                echo 'Logged out of Docker Hub.'
+                echo "Pipeline finished. Always block executed."
             }
         }
         success {
