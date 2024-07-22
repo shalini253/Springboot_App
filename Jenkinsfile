@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('DockerToken')
+        DOCKERHUB_CREDS = credentials('DockerToken') // Match the successful test pipeline
         KUBE_CONFIG = credentials('Config_Pat')
     }
     stages {
@@ -13,6 +13,7 @@ pipeline {
         stage('Check Docker') {
             steps {
                 script {
+                    // Check if Docker is available on the Jenkins agent
                     sh 'docker --version'
                     echo 'Docker is available.'
                 }
@@ -29,7 +30,7 @@ pipeline {
         stage('Docker Push') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDS') {
                         dockerImage.push("${env.BUILD_NUMBER}")
                         dockerImage.push("latest")
                     }
@@ -64,4 +65,3 @@ pipeline {
         }
     }
 }
-
