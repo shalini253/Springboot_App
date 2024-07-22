@@ -13,7 +13,6 @@ pipeline {
         stage('Check Docker') {
             steps {
                 script {
-                    // Check if Docker is available on the Jenkins agent
                     sh 'docker --version'
                     echo 'Docker is available.'
                 }
@@ -65,3 +64,4 @@ pipeline {
         }
     }
 }
+
